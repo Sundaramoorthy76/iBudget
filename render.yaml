@@ -38,8 +38,9 @@ services:
           name: ibudget-db
           property: password
 
-  - type: static
+  - type: web
     name: ibudget-ui
+    runtime: static
     rootDir: ibudget-frontend
     plan: free
     buildCommand: npm ci --no-fund --no-audit && npm run build
