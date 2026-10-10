@@ -42,7 +42,6 @@ services:
     name: ibudget-ui
     runtime: static
     rootDir: ibudget-frontend
-    plan: free
     buildCommand: npm ci --no-fund --no-audit && npm run build
     staticPublishPath: dist/ibudget-frontend/browser
     envVars:
