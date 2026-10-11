@@ -1,0 +1,48 @@
+<section class="content-grid">
+  <form class="entry-form" (ngSubmit)="submitted.emit()">
+    <h2>{{ title }}</h2>
+    <div class="field-row">
+      <label><span>Title</span><input #firstEditable [(ngModel)]="form.title" name="title" type="text" placeholder="Salary" [readonly]="readOnly" required /></label>
+      <label><span>Amount</span><input [(ngModel)]="form.amount" name="amount" type="number" min="0.01" step="0.01" [readonly]="readOnly" required /></label>
+    </div>
+    <div class="field-row">
+      <label>
+        <span>Type</span>
+        <select [(ngModel)]="form.type" name="type" [disabled]="readOnly">
+          <option value="INCOME">Income</option><option value="EXPENSE">Expense</option>
+        </select>
+      </label>
+      <label><span>Category</span><input [(ngModel)]="form.category" name="category" type="text" placeholder="Food" [readonly]="readOnly" required /></label>
+    </div>
+    <label><span>Description</span><textarea [(ngModel)]="form.description" name="description" rows="3" placeholder="Optional notes" [readonly]="readOnly"></textarea></label>
+    <label><span>Date</span><input [(ngModel)]="form.entryDate" name="entryDate" type="date" [readonly]="readOnly" required /></label>
+    <div class="action-row">
+      <button type="submit" *ngIf="!readOnly">{{ editing ? 'Update' : 'Save' }} {{ view }}</button>
+      <button type="button" class="secondary-btn" *ngIf="editing || readOnly" (click)="cancelled.emit()">{{ readOnly ? 'Close' : 'Cancel' }}</button>
+    </div>
+  </form>
+
+  <section class="entries-panel">
+    <table>
+      <thead><tr><th>Title</th><th>Category</th><th>Amount</th><th>Date</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let entry of visibleEntries">
+          <td><button type="button" class="link-btn" (click)="viewed.emit(entry)">{{ entry.title }}</button></td>
+          <td>{{ entry.category }}</td><td>{{ formatCurrency(entry.amount) }}</td><td>{{ entry.entryDate }}</td>
+          <td class="row-actions">
+            <button type="button" class="small-btn" (click)="viewed.emit(entry)" title="View" aria-label="View record">👁</button>
+            <button type="button" class="small-btn edit-btn" (click)="edited.emit(entry)" title="Edit" aria-label="Edit record">✎</button>
+            <button type="button" class="small-btn delete-btn" (click)="deleted.emit(entry.id)" title="Delete" aria-label="Delete record">🗑</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <app-pagination
+      [totalItems]="filteredEntries.length"
+      [pageIndex]="pageIndex"
+      [pageSize]="pageSize"
+      (pageIndexChange)="changePage($event)"
+      (pageSizeChange)="changePageSize($event)">
+    </app-pagination>
+  </section>
+</section>

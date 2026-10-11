@@ -1,47 +1,43 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../environments/environment';
+import {
+  BudgetEntry,
+  BudgetSummary,
+  Employee,
+  EmployeeForm,
+  EmployeeSalaryRecord,
+  EmployeeSalaryRecordForm,
+  ViewName
+} from './models';
 
 const API_BASE_URL = environment.apiBaseUrl;
-
-type ViewName = 'dashboard' | 'income' | 'expense' | 'reports';
-
-interface BudgetEntry {
-  id?: number;
-  title: string;
-  amount: number;
-  type: 'INCOME' | 'EXPENSE';
-  category: string;
-  description: string;
-  entryDate: string;
-}
-
-interface BudgetSummary {
-  totalIncome: number;
-  totalExpense: number;
-  balance: number;
-}
-
-interface CategoryBreakdown {
-  category: string;
-  total: number;
-}
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.html',
   standalone: false,
-  styleUrl: './app.css'
+  styleUrl: './app.css',
+  encapsulation: ViewEncapsulation.None
 })
 export class App implements OnInit {
-  @ViewChild('titleInput') titleInput?: ElementRef<HTMLInputElement>;
-
   entries: BudgetEntry[] = [];
   summary: BudgetSummary = { totalIncome: 0, totalExpense: 0, balance: 0 };
   selectedView: ViewName = 'dashboard';
   selectedEntry: BudgetEntry | null = null;
   isEditing = false;
   editEntryId: number | null = null;
+  employees: Employee[] = [];
+  selectedEmployeeId: number | null = null;
+  employeeForm: EmployeeForm = this.createEmployeeForm();
+  employeeEditingId: number | null = null;
+  employeeReadOnly = false;
+  salaryRecords: EmployeeSalaryRecord[] = [];
+  salaryRecordForm: EmployeeSalaryRecordForm = this.createSalaryRecordForm();
+  salaryRecordEditingId: number | null = null;
+  salaryRecordReadOnly = false;
+  employeeError = '';
+  salaryRecordError = '';
 
   get isReadOnly(): boolean {
     return this.selectedEntry !== null && !this.isEditing;
@@ -58,6 +54,26 @@ export class App implements OnInit {
 
   constructor(private readonly http: HttpClient) {}
 
+  get pageTitle(): string {
+    if (this.selectedView === 'employees') {
+      return this.employeeReadOnly ? 'View Employee' : 'Employees';
+    }
+    if (this.selectedView === 'salary-records') {
+      return 'Advances & Deductions';
+    }
+    if (this.selectedView === 'income') {
+      return 'Income';
+    }
+    if (this.selectedView === 'expense') {
+      return 'Expenses';
+    }
+    return this.selectedView === 'reports' ? 'Reports' : 'My Monthly Budget';
+  }
+
+  get showsBudgetSummary(): boolean {
+    return this.selectedView !== 'employees' && this.selectedView !== 'salary-records';
+  }
+
   ngOnInit(): void {
     this.loadSummary();
     this.loadEntries();
@@ -71,43 +87,260 @@ export class App implements OnInit {
     return this.entries.filter((entry) => entry.type === 'EXPENSE');
   }
 
-  get categoryBreakdown(): CategoryBreakdown[] {
-    const totals = new Map<string, number>();
-
-    this.entries.forEach((entry) => {
-      const current = totals.get(entry.category) ?? 0;
-      totals.set(entry.category, current + Number(entry.amount));
-    });
-
-    return Array.from(totals.entries())
-      .map(([category, total]) => ({ category, total }))
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 6);
-  }
-
-  get monthlyTrend(): Array<{ label: string; income: number; expense: number }> {
-    const months = Array.from({ length: 6 }, (_, index) => {
-      const date = new Date();
-      date.setMonth(date.getMonth() - (5 - index));
-      return date;
-    });
-
-    return months.map((date) => {
-      const label = date.toLocaleString('en-US', { month: 'short' });
-      const income = this.entries
-        .filter((entry) => entry.type === 'INCOME' && new Date(entry.entryDate).getMonth() === date.getMonth() && new Date(entry.entryDate).getFullYear() === date.getFullYear())
-        .reduce((sum, entry) => sum + Number(entry.amount), 0);
-      const expense = this.entries
-        .filter((entry) => entry.type === 'EXPENSE' && new Date(entry.entryDate).getMonth() === date.getMonth() && new Date(entry.entryDate).getFullYear() === date.getFullYear())
-        .reduce((sum, entry) => sum + Number(entry.amount), 0);
-
-      return { label, income, expense };
-    });
-  }
-
   selectView(view: ViewName): void {
     this.selectedView = view;
+    if (view === 'employees') {
+      this.startNewEmployee();
+      this.loadEmployees();
+      return;
+    }
+    if (view === 'salary-records') {
+      this.salaryRecordEditingId = null;
+      this.salaryRecordReadOnly = false;
+      this.salaryRecordForm = this.createSalaryRecordForm();
+      this.loadEmployees();
+      if (this.selectedEmployeeId !== null) {
+        this.loadSalaryRecords();
+      }
+      return;
+    }
     this.resetForm(view === 'expense' ? 'EXPENSE' : 'INCOME');
+  }
+
+  private createEmployeeForm(): EmployeeForm {
+    return {
+      employeeCode: '',
+      fullName: '',
+      department: '',
+      phone: '',
+      monthlySalary: 0,
+      active: true
+    };
+  }
+
+  private createSalaryRecordForm(): EmployeeSalaryRecordForm {
+    return {
+      type: 'ADVANCE',
+      amount: 0,
+      recordDate: new Date().toISOString().slice(0, 10),
+      description: ''
+    };
+  }
+
+  loadEmployees(): void {
+    this.http.get<Employee[]>(`${API_BASE_URL}/api/employees`).subscribe({
+      next: (data) => {
+        this.employees = data;
+        if (this.selectedEmployeeId !== null && !data.some((employee) => employee.id === this.selectedEmployeeId)) {
+          this.selectedEmployeeId = null;
+          this.salaryRecords = [];
+        }
+      },
+      error: () => {
+        this.employeeError = 'Unable to load employees. Please try again.';
+      }
+    });
+  }
+
+  startNewEmployee(): void {
+    this.employeeEditingId = null;
+    this.employeeReadOnly = false;
+    this.employeeForm = this.createEmployeeForm();
+    this.employeeError = '';
+  }
+
+  editEmployee(employee: Employee): void {
+    this.employeeEditingId = employee.id;
+    this.employeeReadOnly = false;
+    this.employeeForm = {
+      employeeCode: employee.employeeCode,
+      fullName: employee.fullName,
+      department: employee.department ?? '',
+      phone: employee.phone ?? '',
+      monthlySalary: Number(employee.monthlySalary),
+      active: employee.active
+    };
+    this.employeeError = '';
+  }
+
+  saveEmployee(): void {
+    if (!this.employeeForm.employeeCode.trim() || !this.employeeForm.fullName.trim() || this.employeeForm.monthlySalary <= 0) {
+      return;
+    }
+
+    const request = this.employeeEditingId === null
+      ? this.http.post<Employee>(`${API_BASE_URL}/api/employees`, this.employeeForm)
+      : this.http.put<Employee>(`${API_BASE_URL}/api/employees/${this.employeeEditingId}`, this.employeeForm);
+
+    request.subscribe({
+      next: () => {
+        this.employeeError = '';
+        this.employeeEditingId = null;
+        this.employeeForm = this.createEmployeeForm();
+        this.employeeReadOnly = false;
+        this.selectedEmployeeId = null;
+        this.loadEmployees();
+      },
+      error: (error) => {
+        this.employeeError = error.status === 409
+          ? 'That employee code is already in use.'
+          : 'Unable to save this employee. Please check the details and try again.';
+      }
+    });
+  }
+
+  toggleEmployeeStatus(employee: Employee): void {
+    const request = {
+      employeeCode: employee.employeeCode,
+      fullName: employee.fullName,
+      department: employee.department,
+      phone: employee.phone,
+      monthlySalary: employee.monthlySalary,
+      active: !employee.active
+    };
+
+    this.http.put<Employee>(`${API_BASE_URL}/api/employees/${employee.id}`, request).subscribe({
+      next: (updated) => {
+        this.employees = this.employees.map((item) => item.id === updated.id ? updated : item);
+      },
+      error: () => {
+        this.employeeError = 'Unable to update employee status. Please try again.';
+      }
+    });
+  }
+
+  selectEmployee(employee: Employee): void {
+    this.selectedEmployeeId = employee.id;
+    this.selectedView = 'salary-records';
+    this.salaryRecordEditingId = null;
+    this.salaryRecordReadOnly = false;
+    this.salaryRecordForm = this.createSalaryRecordForm();
+    this.salaryRecordError = '';
+    this.loadSalaryRecords();
+  }
+
+  viewEmployee(employee: Employee): void {
+    this.selectedEmployeeId = employee.id;
+    this.selectedView = 'employees';
+    this.employeeEditingId = employee.id;
+    this.employeeReadOnly = true;
+    this.employeeForm = {
+      employeeCode: employee.employeeCode,
+      fullName: employee.fullName,
+      department: employee.department ?? '',
+      phone: employee.phone ?? '',
+      monthlySalary: Number(employee.monthlySalary),
+      active: employee.active
+    };
+    this.employeeError = '';
+  }
+
+  backToEmployeeList(): void {
+    this.selectedView = 'employees';
+    this.cancelSalaryRecordEdit();
+  }
+
+  get selectedEmployee(): Employee | undefined {
+    return this.employees.find((employee) => employee.id === this.selectedEmployeeId);
+  }
+
+  loadSalaryRecords(): void {
+    if (this.selectedEmployeeId === null) {
+      this.salaryRecords = [];
+      return;
+    }
+
+    this.http.get<EmployeeSalaryRecord[]>(
+      `${API_BASE_URL}/api/employees/${this.selectedEmployeeId}/salary-records`
+    ).subscribe({
+      next: (data) => {
+        this.salaryRecords = data;
+      },
+      error: () => {
+        this.salaryRecordError = 'Unable to load employee advances and deductions.';
+      }
+    });
+  }
+
+  saveSalaryRecord(): void {
+    if (this.selectedEmployeeId === null || this.salaryRecordForm.amount <= 0) {
+      return;
+    }
+
+    const url = `${API_BASE_URL}/api/employees/${this.selectedEmployeeId}/salary-records`;
+    const request = this.salaryRecordEditingId === null
+      ? this.http.post<EmployeeSalaryRecord>(url, this.salaryRecordForm)
+      : this.http.put<EmployeeSalaryRecord>(`${url}/${this.salaryRecordEditingId}`, this.salaryRecordForm);
+
+    request.subscribe({
+      next: () => {
+        this.salaryRecordEditingId = null;
+        this.salaryRecordReadOnly = false;
+        this.salaryRecordForm = this.createSalaryRecordForm();
+        this.salaryRecordError = '';
+        this.loadSalaryRecords();
+      },
+      error: () => {
+        this.salaryRecordError = 'Unable to save this advance or deduction. Please try again.';
+      }
+    });
+  }
+
+  editSalaryRecord(record: EmployeeSalaryRecord): void {
+    this.salaryRecordEditingId = record.id;
+    this.salaryRecordReadOnly = false;
+    this.salaryRecordForm = {
+      type: record.type,
+      amount: Number(record.amount),
+      recordDate: record.recordDate,
+      description: record.description ?? ''
+    };
+    this.salaryRecordError = '';
+  }
+
+  viewSalaryRecord(record: EmployeeSalaryRecord): void {
+    this.salaryRecordEditingId = record.id;
+    this.salaryRecordReadOnly = true;
+    this.salaryRecordForm = {
+      type: record.type,
+      amount: Number(record.amount),
+      recordDate: record.recordDate,
+      description: record.description ?? ''
+    };
+    this.salaryRecordError = '';
+  }
+
+  closeSalaryRecordView(): void {
+    this.salaryRecordEditingId = null;
+    this.salaryRecordReadOnly = false;
+    this.salaryRecordForm = this.createSalaryRecordForm();
+  }
+
+  cancelSalaryRecordEdit(): void {
+    this.salaryRecordEditingId = null;
+    this.salaryRecordReadOnly = false;
+    this.salaryRecordForm = this.createSalaryRecordForm();
+    this.salaryRecordError = '';
+  }
+
+  deleteSalaryRecord(record: EmployeeSalaryRecord): void {
+    if (this.selectedEmployeeId === null || !window.confirm('Delete this salary record?')) {
+      return;
+    }
+
+    this.http.delete(
+      `${API_BASE_URL}/api/employees/${this.selectedEmployeeId}/salary-records/${record.id}`
+    ).subscribe({
+      next: () => {
+        if (this.salaryRecordEditingId === record.id) {
+          this.closeSalaryRecordView();
+        }
+        this.loadSalaryRecords();
+      },
+      error: () => {
+        this.salaryRecordError = 'Unable to delete this salary record. Please try again.';
+      }
+    });
   }
 
   resetForm(type: 'INCOME' | 'EXPENSE' = 'INCOME'): void {
@@ -122,7 +355,6 @@ export class App implements OnInit {
     this.isEditing = false;
     this.editEntryId = null;
     this.selectedEntry = null;
-    setTimeout(() => this.titleInput?.nativeElement.focus());
   }
 
   viewEntry(entry: BudgetEntry): void {
@@ -145,7 +377,6 @@ export class App implements OnInit {
       amount: Number(entry.amount),
       entryDate: entry.entryDate
     };
-    setTimeout(() => this.titleInput?.nativeElement.focus());
   }
 
   cancelEdit(): void {
@@ -219,14 +450,4 @@ export class App implements OnInit {
     }).format(value);
   }
 
-  formatType(type: 'INCOME' | 'EXPENSE'): string {
-    return type === 'INCOME' ? 'Income' : 'Expense';
-  }
-
-  percentageOfTotal(value: number, total: number): number {
-    if (!total) {
-      return 0;
-    }
-    return (value / total) * 100;
-  }
 }

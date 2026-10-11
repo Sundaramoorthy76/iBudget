@@ -1,6 +1,6 @@
 package com.moorthy.ibudget;
 
-import com.moorthy.ibudget.model.BudgetEntry;
+import com.moorthy.ibudget.dto.BudgetEntryRequest;
 import com.moorthy.ibudget.model.EntryType;
 import com.moorthy.ibudget.service.BudgetService;
 import org.junit.jupiter.api.Test;
@@ -22,8 +22,12 @@ class BudgetServiceTest {
 
     @Test
     void shouldReturnSummaryWithTotals() {
-        budgetService.save(new BudgetEntry(null, "Salary", new BigDecimal("2600.00"), EntryType.INCOME, "Salary", "Monthly pay", LocalDate.now()));
-        budgetService.save(new BudgetEntry(null, "Groceries", new BigDecimal("145.50"), EntryType.EXPENSE, "Food", "Weekly groceries", LocalDate.now()));
+        budgetService.save(new BudgetEntryRequest(
+                "Salary", new BigDecimal("2600.00"), EntryType.INCOME, "Salary", "Monthly pay", LocalDate.now()
+        ));
+        budgetService.save(new BudgetEntryRequest(
+                "Groceries", new BigDecimal("145.50"), EntryType.EXPENSE, "Food", "Weekly groceries", LocalDate.now()
+        ));
 
         var summary = budgetService.getSummary();
 
@@ -34,14 +38,17 @@ class BudgetServiceTest {
 
     @Test
     void shouldUpdateExistingEntry() {
-        BudgetEntry entry = budgetService.save(new BudgetEntry(null, "Bonus", new BigDecimal("500.00"), EntryType.INCOME, "Salary", "Quarterly bonus", LocalDate.now()));
+        var entry = budgetService.save(new BudgetEntryRequest(
+                "Bonus", new BigDecimal("500.00"), EntryType.INCOME, "Salary", "Quarterly bonus", LocalDate.now()
+        ));
 
-        BudgetEntry updated = new BudgetEntry(null, "Bonus adjusted", new BigDecimal("650.00"), EntryType.INCOME, "Salary", "Updated bonus", LocalDate.now());
-        BudgetEntry result = budgetService.update(entry.getId(), updated);
+        var result = budgetService.update(entry.id(), new BudgetEntryRequest(
+                "Bonus adjusted", new BigDecimal("650.00"), EntryType.INCOME, "Salary", "Updated bonus", LocalDate.now()
+        ));
 
-        assertThat(result.getId()).isEqualTo(entry.getId());
-        assertThat(result.getTitle()).isEqualTo("Bonus adjusted");
-        assertThat(result.getAmount()).isEqualByComparingTo(new BigDecimal("650.00"));
-        assertThat(result.getDescription()).isEqualTo("Updated bonus");
+        assertThat(result.id()).isEqualTo(entry.id());
+        assertThat(result.title()).isEqualTo("Bonus adjusted");
+        assertThat(result.amount()).isEqualByComparingTo(new BigDecimal("650.00"));
+        assertThat(result.description()).isEqualTo("Updated bonus");
     }
 }

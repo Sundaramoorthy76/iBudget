@@ -1,11 +1,15 @@
 package com.moorthy.ibudget.service;
 
+import com.moorthy.ibudget.dto.BudgetEntryRequest;
+import com.moorthy.ibudget.dto.BudgetEntryResponse;
+import com.moorthy.ibudget.dto.BudgetSummaryResponse;
 import com.moorthy.ibudget.model.BudgetEntry;
-import com.moorthy.ibudget.model.BudgetSummary;
 import com.moorthy.ibudget.model.EntryType;
 import com.moorthy.ibudget.repository.BudgetEntryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -17,37 +21,39 @@ public class BudgetService {
 
     private final BudgetEntryRepository budgetEntryRepository;
 
-    public List<BudgetEntry> findAll() {
-        return budgetEntryRepository.findAllByOrderByEntryDateDesc();
+    public List<BudgetEntryResponse> findAll() {
+        return budgetEntryRepository.findAllByOrderByEntryDateDesc().stream()
+                .map(this::toResponse)
+                .toList();
     }
 
-    public Optional<BudgetEntry> findById(Long id) {
-        return budgetEntryRepository.findById(id);
+    public Optional<BudgetEntryResponse> findById(Long id) {
+        return budgetEntryRepository.findById(id).map(this::toResponse);
     }
 
-    public BudgetEntry save(BudgetEntry entry) {
-        return budgetEntryRepository.save(entry);
+    public BudgetEntryResponse save(BudgetEntryRequest request) {
+        return toResponse(budgetEntryRepository.save(toEntity(request)));
     }
 
-    public BudgetEntry update(Long id, BudgetEntry updatedEntry) {
+    public BudgetEntryResponse update(Long id, BudgetEntryRequest request) {
         BudgetEntry existing = budgetEntryRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Budget entry not found with id: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Budget entry not found"));
 
-        existing.setTitle(updatedEntry.getTitle());
-        existing.setAmount(updatedEntry.getAmount());
-        existing.setType(updatedEntry.getType());
-        existing.setCategory(updatedEntry.getCategory());
-        existing.setDescription(updatedEntry.getDescription());
-        existing.setEntryDate(updatedEntry.getEntryDate());
+        existing.setTitle(request.title());
+        existing.setAmount(request.amount());
+        existing.setType(request.type());
+        existing.setCategory(request.category());
+        existing.setDescription(request.description());
+        existing.setEntryDate(request.entryDate());
 
-        return budgetEntryRepository.save(existing);
+        return toResponse(budgetEntryRepository.save(existing));
     }
 
     public void deleteById(Long id) {
         budgetEntryRepository.deleteById(id);
     }
 
-    public BudgetSummary getSummary() {
+    public BudgetSummaryResponse getSummary() {
         BigDecimal totalIncome = budgetEntryRepository.sumByType(EntryType.INCOME);
         BigDecimal totalExpense = budgetEntryRepository.sumByType(EntryType.EXPENSE);
 
@@ -58,6 +64,30 @@ public class BudgetService {
             totalExpense = BigDecimal.ZERO;
         }
 
-        return new BudgetSummary(totalIncome, totalExpense, totalIncome.subtract(totalExpense));
+        return new BudgetSummaryResponse(totalIncome, totalExpense, totalIncome.subtract(totalExpense));
+    }
+
+    private BudgetEntry toEntity(BudgetEntryRequest request) {
+        BudgetEntry entry = new BudgetEntry();
+        entry.setTitle(request.title());
+        entry.setAmount(request.amount());
+        entry.setType(request.type());
+        entry.setCategory(request.category());
+        entry.setDescription(request.description());
+        entry.setEntryDate(request.entryDate());
+        return entry;
+    }
+
+    private BudgetEntryResponse toResponse(BudgetEntry entry) {
+        return new BudgetEntryResponse(
+                entry.getId(),
+                entry.getTitle(),
+                entry.getAmount(),
+                entry.getType(),
+                entry.getCategory(),
+                entry.getDescription(),
+                entry.getEntryDate(),
+                entry.getCreatedAt()
+        );
     }
 }

@@ -1,0 +1,18 @@
+<nav class="pagination" *ngIf="totalItems > 0" aria-label="Table pagination">
+  <span class="pagination-count">Showing {{ firstItem }}–{{ lastItem }} of {{ totalItems }}</span>
+  <label class="pagination-size">
+    <span>Rows per page</span>
+    <select [ngModel]="pageSize" (ngModelChange)="changePageSize($event)" aria-label="Rows per page">
+      <option [ngValue]="10">10</option>
+      <option [ngValue]="25">25</option>
+      <option [ngValue]="50">50</option>
+    </select>
+  </label>
+  <div class="pagination-actions">
+    <button type="button" (click)="goToPage(0)" [disabled]="pageIndex === 0" aria-label="First page">«</button>
+    <button type="button" (click)="goToPage(pageIndex - 1)" [disabled]="pageIndex === 0" aria-label="Previous page">‹</button>
+    <span>Page {{ pageIndex + 1 }} of {{ totalPages }}</span>
+    <button type="button" (click)="goToPage(pageIndex + 1)" [disabled]="pageIndex + 1 >= totalPages" aria-label="Next page">›</button>
+    <button type="button" (click)="goToPage(totalPages - 1)" [disabled]="pageIndex + 1 >= totalPages" aria-label="Last page">»</button>
+  </div>
+</nav>

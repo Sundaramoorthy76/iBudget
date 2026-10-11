@@ -1,26 +1,16 @@
-﻿<div class="app-shell">
+<div class="app-shell">
   <aside class="sidebar">
     <div class="brand-block">
       <div class="brand-mark">i</div>
-      <div>
-        <p class="eyebrow">Budget</p>
-        <h2>iBudget</h2>
-      </div>
+      <div><p class="eyebrow">Budget</p><h2>iBudget</h2></div>
     </div>
-
     <nav class="nav-menu" aria-label="Main navigation">
-      <button type="button" [class.active]="selectedView === 'dashboard'" (click)="selectView('dashboard')">
-        Dashboard
-      </button>
-      <button type="button" [class.active]="selectedView === 'income'" (click)="selectView('income')">
-        Income
-      </button>
-      <button type="button" [class.active]="selectedView === 'expense'" (click)="selectView('expense')">
-        Expenses
-      </button>
-      <button type="button" [class.active]="selectedView === 'reports'" (click)="selectView('reports')">
-        Reports
-      </button>
+      <button type="button" [class.active]="selectedView === 'dashboard'" (click)="selectView('dashboard')">Dashboard</button>
+      <button type="button" [class.active]="selectedView === 'income'" (click)="selectView('income')">Income</button>
+      <button type="button" [class.active]="selectedView === 'expense'" (click)="selectView('expense')">Expenses</button>
+      <button type="button" [class.active]="selectedView === 'employees'" (click)="selectView('employees')">Employees</button>
+      <button type="button" [class.active]="selectedView === 'salary-records'" (click)="selectView('salary-records')">Advances &amp; Deductions</button>
+      <button type="button" [class.active]="selectedView === 'reports'" (click)="selectView('reports')">Reports</button>
     </nav>
   </aside>
 
@@ -28,176 +18,78 @@
     <header class="topbar">
       <div>
         <p class="eyebrow">Home Budget Dashboard</p>
-        <h1>My Monthly Budget</h1>
+        <h1>{{ pageTitle }}</h1>
       </div>
-      <div class="summary-pill" [class.positive]="summary.balance >= 0">
+      <div class="summary-pill" [class.positive]="summary.balance >= 0" *ngIf="showsBudgetSummary">
         {{ formatCurrency(summary.balance) }} remaining
       </div>
     </header>
 
     <section class="summary-grid" *ngIf="selectedView === 'dashboard' || selectedView === 'reports'">
-      <article class="summary-card income">
-        <span>Total income</span>
-        <strong>{{ formatCurrency(summary.totalIncome) }}</strong>
-      </article>
-      <article class="summary-card expense">
-        <span>Total expenses</span>
-        <strong>{{ formatCurrency(summary.totalExpense) }}</strong>
-      </article>
-      <article class="summary-card balance">
-        <span>Balance</span>
-        <strong>{{ formatCurrency(summary.balance) }}</strong>
-      </article>
+      <article class="summary-card income"><span>Total income</span><strong>{{ formatCurrency(summary.totalIncome) }}</strong></article>
+      <article class="summary-card expense"><span>Total expenses</span><strong>{{ formatCurrency(summary.totalExpense) }}</strong></article>
+      <article class="summary-card balance"><span>Balance</span><strong>{{ formatCurrency(summary.balance) }}</strong></article>
     </section>
 
-    <section class="content-grid" *ngIf="selectedView === 'dashboard'">
-      <div class="panel-card dashboard-panel">
-        <h2>Recent transactions</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Type</th>
-              <th>Category</th>
-              <th>Amount</th>
-              <th>Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let entry of entries.slice(0, 8)">
-              <td>{{ entry.title }}</td>
-              <td>
-                <span class="tag" [class.income]="entry.type === 'INCOME'" [class.expense]="entry.type === 'EXPENSE'">
-                  {{ formatType(entry.type) }}
-                </span>
-              </td>
-              <td>{{ entry.category }}</td>
-              <td>{{ formatCurrency(entry.amount) }}</td>
-              <td>{{ entry.entryDate }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <app-dashboard-screen
+      *ngIf="selectedView === 'dashboard'"
+      [entries]="entries"
+      [incomeCount]="incomeEntries.length"
+      [expenseCount]="expenseEntries.length">
+    </app-dashboard-screen>
 
-      <div class="panel-card">
-        <h2>Quick snapshot</h2>
-        <div class="mini-metrics">
-          <div>
-            <span>Income entries</span>
-            <strong>{{ incomeEntries.length }}</strong>
-          </div>
-          <div>
-            <span>Expense entries</span>
-            <strong>{{ expenseEntries.length }}</strong>
-          </div>
-        </div>
-      </div>
-    </section>
+    <app-transactions-screen
+      *ngIf="selectedView === 'income' || selectedView === 'expense'"
+      [view]="selectedView === 'income' ? 'income' : 'expense'"
+      [entries]="entries"
+      [form]="form"
+      [readOnly]="isReadOnly"
+      [editing]="isEditing"
+      (submitted)="submitForm()"
+      (viewed)="viewEntry($event)"
+      (edited)="editEntry($event)"
+      (deleted)="deleteEntry($event)"
+      (cancelled)="cancelEdit()">
+    </app-transactions-screen>
 
-    <section class="content-grid" *ngIf="selectedView === 'income' || selectedView === 'expense'">
-      <form class="entry-form" (ngSubmit)="submitForm()">
-        <h2>{{ isReadOnly ? 'View ' + (selectedView === 'income' ? 'income' : 'expense') : isEditing ? 'Edit ' + (selectedView === 'income' ? 'income' : 'expense') : (selectedView === 'income' ? 'Add income' : 'Add expense') }}</h2>
+    <app-reports-screen
+      *ngIf="selectedView === 'reports'"
+      [entries]="entries"
+      [summary]="summary">
+    </app-reports-screen>
 
-        <div class="field-row">
-          <label>
-            <span>Title</span>
-            <input #titleInput [(ngModel)]="form.title" name="title" type="text" placeholder="Salary" [readonly]="isReadOnly" required />
-          </label>
-          <label>
-            <span>Amount</span>
-            <input [(ngModel)]="form.amount" name="amount" type="number" min="0.01" step="0.01" [readonly]="isReadOnly" required />
-          </label>
-        </div>
+    <app-employees-screen
+      *ngIf="selectedView === 'employees'"
+      [employees]="employees"
+      [form]="employeeForm"
+      [editingId]="employeeEditingId"
+      [readOnly]="employeeReadOnly"
+      [selectedEmployeeId]="selectedEmployeeId"
+      [error]="employeeError"
+      (add)="startNewEmployee()"
+      (save)="saveEmployee()"
+      (view)="viewEmployee($event)"
+      (edit)="editEmployee($event)"
+      (toggleStatus)="toggleEmployeeStatus($event)">
+    </app-employees-screen>
 
-        <div class="field-row">
-          <label>
-            <span>Type</span>
-            <select [(ngModel)]="form.type" name="type" [disabled]="isReadOnly">
-              <option value="INCOME">Income</option>
-              <option value="EXPENSE">Expense</option>
-            </select>
-          </label>
-          <label>
-            <span>Category</span>
-            <input [(ngModel)]="form.category" name="category" type="text" placeholder="Food" [readonly]="isReadOnly" required />
-          </label>
-        </div>
-
-        <label>
-          <span>Description</span>
-          <textarea [(ngModel)]="form.description" name="description" rows="3" placeholder="Optional notes" [readonly]="isReadOnly"></textarea>
-        </label>
-
-        <label>
-          <span>Date</span>
-          <input [(ngModel)]="form.entryDate" name="entryDate" type="date" [readonly]="isReadOnly" required />
-        </label>
-
-        <div class="action-row">
-          <button type="submit" *ngIf="!isReadOnly">{{ isEditing ? 'Update' : 'Save' }} {{ selectedView === 'income' ? 'income' : 'expense' }}</button>
-          <button type="button" class="secondary-btn" *ngIf="isEditing || isReadOnly" (click)="cancelEdit()">{{ isReadOnly ? 'Close' : 'Cancel' }}</button>
-        </div>
-      </form>
-
-      <section class="entries-panel">
-        <h2>{{ selectedView === 'income' ? 'Income records' : 'Expense records' }}</h2>
-
-        <table>
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Category</th>
-              <th>Amount</th>
-              <th>Date</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let entry of (selectedView === 'income' ? incomeEntries : expenseEntries)">
-              <td>
-                <button type="button" class="link-btn" (click)="viewEntry(entry)">{{ entry.title }}</button>
-              </td>
-              <td>{{ entry.category }}</td>
-              <td>{{ formatCurrency(entry.amount) }}</td>
-              <td>{{ entry.entryDate }}</td>
-              <td class="row-actions">
-                <button type="button" class="small-btn" (click)="viewEntry(entry)" title="Read" aria-label="Read record">👁</button>
-                <button type="button" class="small-btn edit-btn" (click)="editEntry(entry)" title="Edit" aria-label="Edit record">✎</button>
-                <button type="button" class="small-btn delete-btn" (click)="deleteEntry(entry.id)" title="Delete" aria-label="Delete record">🗑</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-    </section>
-
-    <section class="reports-panel" *ngIf="selectedView === 'reports'">
-      <div class="panel-card">
-        <h2>Category breakdown</h2>
-        <div class="report-list" *ngFor="let item of categoryBreakdown">
-          <div class="report-row">
-            <span>{{ item.category }}</span>
-            <strong>{{ formatCurrency(item.total) }}</strong>
-          </div>
-          <div class="progress-bar">
-            <span [style.width.%]="percentageOfTotal(item.total, summary.totalIncome + summary.totalExpense)"></span>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel-card">
-        <h2>Monthly trend</h2>
-        <div class="trend-grid">
-          <div *ngFor="let month of monthlyTrend" class="trend-item">
-            <span>{{ month.label }}</span>
-            <div class="trend-bars">
-              <div class="bar income-bar" [style.height.%]="(month.income / (month.income + month.expense || 1)) * 100 || 0"></div>
-              <div class="bar expense-bar" [style.height.%]="(month.expense / (month.income + month.expense || 1)) * 100 || 0"></div>
-            </div>
-            <small>{{ formatCurrency(month.income) }} / {{ formatCurrency(month.expense) }}</small>
-          </div>
-        </div>
-      </div>
-    </section>
+    <app-salary-records-screen
+      *ngIf="selectedView === 'salary-records'"
+      [employees]="employees"
+      [selectedEmployee]="selectedEmployee"
+      [employeeForm]="employeeForm"
+      [records]="salaryRecords"
+      [form]="salaryRecordForm"
+      [editingId]="salaryRecordEditingId"
+      [readOnly]="salaryRecordReadOnly"
+      [error]="salaryRecordError"
+      (selectEmployee)="selectEmployee($event)"
+      (save)="saveSalaryRecord()"
+      (cancel)="salaryRecordReadOnly ? closeSalaryRecordView() : cancelSalaryRecordEdit()"
+      (view)="viewSalaryRecord($event)"
+      (edit)="editSalaryRecord($event)"
+      (delete)="deleteSalaryRecord($event)"
+      (back)="backToEmployeeList()">
+    </app-salary-records-screen>
   </main>
 </div>

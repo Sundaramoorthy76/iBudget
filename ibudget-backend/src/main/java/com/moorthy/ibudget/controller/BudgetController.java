@@ -1,7 +1,8 @@
 package com.moorthy.ibudget.controller;
 
-import com.moorthy.ibudget.model.BudgetEntry;
-import com.moorthy.ibudget.model.BudgetSummary;
+import com.moorthy.ibudget.dto.BudgetEntryRequest;
+import com.moorthy.ibudget.dto.BudgetEntryResponse;
+import com.moorthy.ibudget.dto.BudgetSummaryResponse;
 import com.moorthy.ibudget.service.BudgetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,31 +21,34 @@ public class BudgetController {
     private final BudgetService budgetService;
 
     @GetMapping("/budget")
-    public List<BudgetEntry> getBudgetEntries() {
+    public List<BudgetEntryResponse> getBudgetEntries() {
         return budgetService.findAll();
     }
 
     @GetMapping("/budget/{id}")
-    public ResponseEntity<BudgetEntry> getBudgetEntry(@PathVariable Long id) {
+    public ResponseEntity<BudgetEntryResponse> getBudgetEntry(@PathVariable Long id) {
         return budgetService.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/budget/summary")
-    public BudgetSummary getSummary() {
+    public BudgetSummaryResponse getSummary() {
         return budgetService.getSummary();
     }
 
     @PostMapping("/budget")
-    public ResponseEntity<BudgetEntry> createBudgetEntry(@Valid @RequestBody BudgetEntry budgetEntry) {
-        BudgetEntry savedEntry = budgetService.save(budgetEntry);
+    public ResponseEntity<BudgetEntryResponse> createBudgetEntry(@Valid @RequestBody BudgetEntryRequest request) {
+        BudgetEntryResponse savedEntry = budgetService.save(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedEntry);
     }
 
     @PutMapping("/budget/{id}")
-    public ResponseEntity<BudgetEntry> updateBudgetEntry(@PathVariable Long id, @Valid @RequestBody BudgetEntry budgetEntry) {
-        BudgetEntry updatedEntry = budgetService.update(id, budgetEntry);
+    public ResponseEntity<BudgetEntryResponse> updateBudgetEntry(
+            @PathVariable Long id,
+            @Valid @RequestBody BudgetEntryRequest request
+    ) {
+        BudgetEntryResponse updatedEntry = budgetService.update(id, request);
         return ResponseEntity.ok(updatedEntry);
     }
 

@@ -1,0 +1,6 @@
+:host .pagination{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-top:16px;color:#64748b;font-size:.85rem}
+:host .pagination-size{flex-direction:row;align-items:center;gap:8px;white-space:nowrap}
+:host .pagination-size select{padding:6px 8px;border-radius:8px}
+:host .pagination-actions{display:flex;align-items:center;gap:6px}
+:host .pagination-actions button{min-width:34px;padding:6px 8px;border:1px solid #dfe6ee;background:#fff;color:#0f172a}
+:host .pagination-actions button:disabled{color:#94a3b8;cursor:not-allowed;background:#f1f5f9}

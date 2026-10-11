@@ -1,0 +1,58 @@
+<section class="employee-module">
+  <div class="content-grid employee-grid">
+    <form class="entry-form" (ngSubmit)="save.emit()">
+      <h2>{{ title }}</h2>
+      <div class="field-row">
+        <label><span>Employee code</span><input #firstEditable [(ngModel)]="form.employeeCode" name="employeeCode" type="text" maxlength="30" [readonly]="readOnly" required /></label>
+        <label><span>Full name</span><input [(ngModel)]="form.fullName" name="fullName" type="text" [readonly]="readOnly" required /></label>
+      </div>
+      <div class="field-row">
+        <label><span>Department</span><input [(ngModel)]="form.department" name="department" type="text" [readonly]="readOnly" /></label>
+        <label><span>Phone</span><input [(ngModel)]="form.phone" name="phone" type="tel" [readonly]="readOnly" /></label>
+      </div>
+      <div class="field-row">
+        <label><span>Monthly salary</span><input [(ngModel)]="form.monthlySalary" name="monthlySalary" type="number" min="0.01" step="0.01" [readonly]="readOnly" required /></label>
+        <label>
+          <span>Status</span>
+          <select [(ngModel)]="form.active" name="active" [disabled]="readOnly">
+            <option [ngValue]="true">Active</option><option [ngValue]="false">Inactive</option>
+          </select>
+        </label>
+      </div>
+      <p class="form-error" *ngIf="error">{{ error }}</p>
+      <div class="action-row">
+        <button type="submit" *ngIf="!readOnly">{{ editingId === null ? 'Save employee' : 'Update employee' }}</button>
+        <button type="button" class="secondary-btn" *ngIf="editingId !== null" (click)="add.emit()">{{ readOnly ? 'Close' : 'Cancel' }}</button>
+      </div>
+    </form>
+
+    <section class="entries-panel employee-list-panel">
+      <h2>Employees</h2>
+      <p class="empty-state" *ngIf="employees.length === 0">No employees yet. Add an employee to get started.</p>
+      <div class="table-scroll" *ngIf="employees.length > 0">
+        <table>
+          <thead><tr><th>Employee</th><th>Monthly salary</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let employee of visibleEmployees" [class.selected-row]="selectedEmployeeId === employee.id">
+              <td><strong>{{ employee.fullName }}</strong><small>{{ employee.employeeCode }}<span *ngIf="employee.department"> · {{ employee.department }}</span></small></td>
+              <td>{{ formatCurrency(employee.monthlySalary) }}</td>
+              <td>{{ employee.active ? 'Active' : 'Inactive' }}</td>
+              <td class="row-actions employee-actions">
+                <button type="button" class="small-btn view-btn" (click)="view.emit(employee)" title="View employee" aria-label="View employee">👁</button>
+                <button type="button" class="small-btn edit-btn" (click)="edit.emit(employee)" title="Edit employee" aria-label="Edit employee">✎</button>
+                <button type="button" class="small-btn status-btn" (click)="toggleStatus.emit(employee)" [title]="employee.active ? 'Deactivate employee' : 'Activate employee'" [attr.aria-label]="employee.active ? 'Deactivate employee' : 'Activate employee'">⏻</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <app-pagination
+        [totalItems]="employees.length"
+        [pageIndex]="pageIndex"
+        [pageSize]="pageSize"
+        (pageIndexChange)="changePage($event)"
+        (pageSizeChange)="changePageSize($event)">
+      </app-pagination>
+    </section>
+  </div>
+</section>

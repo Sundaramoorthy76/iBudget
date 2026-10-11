@@ -1,0 +1,27 @@
+<section class="content-grid">
+  <div class="panel-card dashboard-panel">
+    <h2>Recent transactions</h2>
+    <table>
+      <thead>
+        <tr><th>Title</th><th>Type</th><th>Category</th><th>Amount</th><th>Date</th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let entry of entries.slice(0, 8)">
+          <td>{{ entry.title }}</td>
+          <td><span class="tag" [class.income]="entry.type === 'INCOME'" [class.expense]="entry.type === 'EXPENSE'">{{ formatType(entry.type) }}</span></td>
+          <td>{{ entry.category }}</td>
+          <td>{{ formatCurrency(entry.amount) }}</td>
+          <td>{{ entry.entryDate }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel-card">
+    <h2>Quick snapshot</h2>
+    <div class="mini-metrics">
+      <div><span>Income entries</span><strong>{{ incomeCount }}</strong></div>
+      <div><span>Expense entries</span><strong>{{ expenseCount }}</strong></div>
+    </div>
+  </div>
+</section>

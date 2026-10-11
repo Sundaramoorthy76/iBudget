@@ -1,0 +1,22 @@
+<section class="reports-panel">
+  <div class="panel-card">
+    <h2>Category breakdown</h2>
+    <div class="report-list" *ngFor="let item of categoryBreakdown">
+      <div class="report-row"><span>{{ item.category }}</span><strong>{{ formatCurrency(item.total) }}</strong></div>
+      <div class="progress-bar"><span [style.width.%]="percentageOfTotal(item.total)"></span></div>
+    </div>
+  </div>
+  <div class="panel-card">
+    <h2>Monthly trend</h2>
+    <div class="trend-grid">
+      <div *ngFor="let month of monthlyTrend" class="trend-item">
+        <span>{{ month.label }}</span>
+        <div class="trend-bars">
+          <div class="bar income-bar" [style.height.%]="(month.income / (month.income + month.expense || 1)) * 100 || 0"></div>
+          <div class="bar expense-bar" [style.height.%]="(month.expense / (month.income + month.expense || 1)) * 100 || 0"></div>
+        </div>
+        <small>{{ formatCurrency(month.income) }} / {{ formatCurrency(month.expense) }}</small>
+      </div>
+    </div>
+  </div>
+</section>

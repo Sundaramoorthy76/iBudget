@@ -1,0 +1,78 @@
+<section class="employee-module">
+  <section class="entries-panel employee-picker-panel" *ngIf="!selectedEmployee">
+    <h2>Select an employee</h2>
+    <p class="empty-state" *ngIf="employees.length === 0">No employees yet. Add an employee in the Employees menu first.</p>
+    <div class="table-scroll" *ngIf="employees.length > 0">
+      <table>
+        <thead><tr><th>Employee</th><th>Monthly salary</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let employee of visibleEmployees">
+            <td><strong>{{ employee.fullName }}</strong><small>{{ employee.employeeCode }}<span *ngIf="employee.department"> · {{ employee.department }}</span></small></td>
+            <td>{{ formatCurrency(employee.monthlySalary) }}</td><td>{{ employee.active ? 'Active' : 'Inactive' }}</td>
+            <td><button type="button" class="small-btn view-btn" (click)="selectEmployee.emit(employee)" title="View advances and deductions" aria-label="View advances and deductions">👁</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <app-pagination
+      [totalItems]="employees.length"
+      [pageIndex]="employeePageIndex"
+      [pageSize]="employeePageSize"
+      (pageIndexChange)="changeEmployeePage($event)"
+      (pageSizeChange)="changeEmployeePageSize($event)">
+    </app-pagination>
+  </section>
+
+  <section class="entries-panel salary-records-panel" *ngIf="selectedEmployee as employee">
+    <div class="section-heading">
+      <div><h2>Advances and deductions</h2><p>{{ employee.fullName }} · Current monthly salary: <strong>{{ formatCurrency(employee.monthlySalary) }}</strong></p></div>
+    </div>
+
+    <div class="content-grid employee-grid">
+      <form class="entry-form" (ngSubmit)="save.emit()">
+        <h3>{{ readOnly ? 'View ' + typeLabel : editingId === null ? 'Add ' + typeLabel : 'Edit ' + typeLabel }}</h3>
+        <div class="field-row">
+          <label>
+            <span>Record type</span>
+            <select #firstEditable [(ngModel)]="form.type" name="recordType" [disabled]="readOnly"><option value="ADVANCE">Advance</option><option value="DEDUCTION">Deduction</option></select>
+          </label>
+          <label><span>Amount</span><input [(ngModel)]="form.amount" name="recordAmount" type="number" min="0.01" step="0.01" [readonly]="readOnly" required /></label>
+        </div>
+        <label><span>Date</span><input [(ngModel)]="form.recordDate" name="recordDate" type="date" [readonly]="readOnly" required /></label>
+        <label><span>Description</span><textarea [(ngModel)]="form.description" name="recordDescription" rows="3" maxlength="500" [readonly]="readOnly"></textarea></label>
+        <p class="form-error" *ngIf="error">{{ error }}</p>
+        <div class="action-row">
+          <button type="submit" *ngIf="!readOnly">{{ editingId === null ? 'Save' : 'Update' }} {{ typeLabel }}</button>
+          <button type="button" class="secondary-btn" *ngIf="editingId !== null" (click)="cancel.emit()">{{ readOnly ? 'Close' : 'Cancel' }}</button>
+        </div>
+      </form>
+
+      <div class="entries-panel record-list-panel">
+        <h3>Record history</h3>
+        <p class="empty-state" *ngIf="records.length === 0">No advances or deductions recorded for this employee.</p>
+        <div class="table-scroll" *ngIf="records.length > 0">
+          <table>
+            <thead><tr><th>Type</th><th>Amount</th><th>Date</th><th>Description</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let record of visibleRecords" [class.selected-row]="editingId === record.id">
+                <td>{{ formatType(record.type) }}</td><td>{{ formatCurrency(record.amount) }}</td><td>{{ record.recordDate }}</td><td>{{ record.description || '—' }}</td>
+                <td class="row-actions">
+                  <button type="button" class="small-btn view-btn" (click)="view.emit(record)" title="View record" aria-label="View salary record">👁</button>
+                  <button type="button" class="small-btn edit-btn" (click)="edit.emit(record)" title="Edit record" aria-label="Edit salary record">✎</button>
+                  <button type="button" class="small-btn delete-btn" (click)="delete.emit(record)" title="Delete record" aria-label="Delete salary record">🗑</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <app-pagination
+          [totalItems]="records.length"
+          [pageIndex]="recordPageIndex"
+          [pageSize]="recordPageSize"
+          (pageIndexChange)="changeRecordPage($event)"
+          (pageSizeChange)="changeRecordPageSize($event)">
+        </app-pagination>
+      </div>
+    </div>
+  </section>
+</section>
